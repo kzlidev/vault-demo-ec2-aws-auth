@@ -50,12 +50,10 @@ variable "private_subnet_cidrs" {
 
 variable "account_id" {
   type    = string
-  default = "058264549112"
 }
 
 variable "vault_addr" {
   type    = string
-  default = "https://vault-cluster-public-vault-5a657fb4.807720c7.z1.hashicorp.cloud:8200"
 }
 
 variable "vault_namespace" {

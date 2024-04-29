@@ -31,7 +31,7 @@ pid_file = "./pidfile"
 exit_after_auth = true
 
 vault {
- address = "https://vault-cluster-public-vault-5a657fb4.807720c7.z1.hashicorp.cloud:8200"
+ address = "${vault_addr}"
 }
 
 auto_auth {
