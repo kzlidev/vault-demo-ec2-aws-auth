@@ -1,0 +1,73 @@
+#!/bin/bash
+echo "Initializing instance..."
+
+# Update dependencies
+sudo yum update -y
+sudo yum install -y yum-utils
+sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+sudo yum -y install vault
+
+curl -O https://bootstrap.pypa.io/get-pip.py
+python3 get-pip.py
+pip install pyopenssl
+pip install flask
+
+cd /home/ec2-user
+mkdir templates
+cat << EOF >> templates/ca.tpl
+{{ with secret "${secret_path}" "common_name=${common_name}" }}{{ .Data.issuing_ca }}{{ end }}
+EOF
+
+cat << EOF >> templates/cert.tpl
+{{ with secret "${secret_path}" "common_name=${common_name}" }}{{ .Data.certificate }}{{ end }}
+EOF
+
+cat << EOF >> templates/key.tpl
+{{ with secret "${secret_path}" "common_name=${common_name}" }}{{ .Data.private_key }}{{ end }}
+EOF
+
+cat << EOF >> vault-agent.hcl
+pid_file = "./pidfile"
+exit_after_auth = true
+
+vault {
+ address = "https://vault-cluster-public-vault-5a657fb4.807720c7.z1.hashicorp.cloud:8200"
+}
+
+auto_auth {
+  method "aws" {
+    mount_path = "auth/aws"
+    config = {
+      type = "iam"
+      role = "${role_name}"
+    }
+  }
+
+ sink {
+   type = "file"
+   config = {
+     path = "vault_agent_token"
+   }
+ }
+}
+
+template {
+ source      = "templates/cert.tpl"
+ destination = "examples/my-app.crt"
+}
+
+template {
+ source      = "templates/ca.tpl"
+ destination = "examples/ca.crt"
+}
+
+template {
+ source      = "templates/key.tpl"
+ destination = "examples/my-app.key"
+}
+EOF
+
+export VAULT_ADDR=https://vault-cluster-public-vault-5a657fb4.807720c7.z1.hashicorp.cloud:8200
+export VAULT_NAMESPACE=admin
+# vault login -method=aws
+# vault agent -config=vault-agent.hcl -exit-after-auth=true
